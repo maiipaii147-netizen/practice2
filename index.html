@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>English Practice – 7 Topics</title>
+<style>
+  body{font-family:Arial,"Noto Sans TC","Noto Sans CJK",sans-serif;background:#f9fafb;color:#111;margin:0}
+  header{background:#1d4ed8;color:#fff;padding:12px 16px}
+  h1{margin:0;font-size:20px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;background:#eef2ff}
+  label{font-size:14px}
+  select,input[type=range],input[type=text],button{font-size:14px}
+  input[type=text]{padding:6px 8px;min-width:160px}
+  button{cursor:pointer;border:1px solid #d1d5db;background:#fff;padding:6px 10px;border-radius:8px}
+  .primary{background:#111;color:#fff;border-color:#111}
+  .tabs{display:flex;gap:8px;padding:10px}
+  .tab-btn{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:6px 12px}
+  .tab-btn.active{background:#111;color:#fff;border-color:#111}
+  .hint{font-size:12px;color:#6b7280;padding:6px 10px}
+  table{width:100%;border-collapse:collapse;background:#fff;margin:10px 0}
+  th,td{border:1px solid #e5e7eb;padding:8px;vertical-align:top}
+  th{background:#f3f4f6}
+  .word-chip{display:inline-flex;gap:6px;align-items:center;border:1px solid #e5e7eb;background:#f8fafc;padding:4px 6px;margin:3px;border-radius:999px}
+  .word-voice{border:none;background:#e5e7eb;padding:2px 8px;border-radius:999px;cursor:pointer}
+  .speak-btn{background:#111;color:#fff;border-color:#111}
+  .muted{color:#6b7280;font-size:13px}
+  .wrap{padding:10px}
+  .toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #d1d5db;background:#fff}
+  .empty{padding:16px;color:#6b7280}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;padding:0 6px;border:1px solid #e5e7eb;border-bottom-width:2px;border-radius:6px;background:#fff}
+</style>
+</head>
+<body>
+<header><h1>English Practice – 7 大主題</h1></header>
+
+<div class="bar">
+  <label>Topic：
+    <select id="topicSelect"></select>
+  </label>
+  <label>Voice：
+    <select id="voiceSelect"></select>
+  </label>
+  <span id="currentVoiceBadge" class="badge">目前語音：—</span>
+  <label>Rate：
+    <input id="rateCtrl" type="range" min="0.6" max="1.4" step="0.05" value="1">
+  </label>
+  <label>Pitch：
+    <input id="pitchCtrl" type="range" min="0.6" max="1.4" step="0.05" value="1">
+  </label>
+  <input id="search" type="text" placeholder="🔍 Search in current tab...">
+  <button id="refreshVoicesBtn">🔄 重新載入語音</button>
+  <button id="testBtn" class="primary">🔊 測試語音</button>
+  <button id="stopBtn">■ 停止</button>
+</div>
+<div class="hint">語音清單會列出裝置支援的所有語音（含台灣國語、美式、英式、Google/Microsoft 等）。若沒聲音：請先點「🔊 測試語音」，或按「🔄 重新載入語音」後改選其他語音。</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="common">常見問句</button>
+  <button class="tab-btn" data-tab="dialog">對話</button>
+  <button class="tab-btn" data-tab="words">必備單字</button>
+</div>
+
+<div class="wrap" id="content"></div>
+
+<script>
+/* ================= DATA（7 主題） ================= */
+const DATA = {
+  lodging: {
+    title: "住宿英文 (Hotel/Accommodation)",
+    common: [
+      { sentence:"I’d like to make a reservation for one night on the 3rd of June.",
+        zh:"我要預訂六月三號一晚的房間。",
+        tokens:[["I’d like to","我想要"],["make a reservation","預訂"],["for one night","一晚"],["on the 3rd of June","在六月三號"]] },
+      { sentence:"I’d like to reserve a single room.",
+        zh:"我想要預訂一間單人房。",
+        tokens:[["I’d like to","我想要"],["reserve","預訂"],["a single room","單人房"]] },
+      { sentence:"Could I book a double room for 3 days from (date) to (date)?",
+        zh:"我要訂一間雙人房從＿月＿日到＿月＿日。",
+        tokens:[["Could I","我可以"],["book","訂"],["a double room","雙人房"],["for 3 days","三天"],["from","從"],["to","到"]] },
+      { sentence:"Is breakfast included in the room price?",
+        zh:"請問房價有包含早餐嗎？",
+        tokens:[["Is","是否"],["breakfast","早餐"],["included","包含"],["in the room price","在房價內"]] },
+      { sentence:"Sorry, I didn’t make a reservation. Do you have any rooms available for tonight?",
+        zh:"不好意思我沒有先訂房，今晚還有空房嗎？",
+        tokens:[["Sorry","不好意思"],["I didn’t make a reservation","我沒有訂房"],["rooms available","有空房"],["for tonight","今晚"]] },
+      { sentence:"When is check-in time / check-out time?",
+        zh:"進房／退房的時間是什麼時候？",
+        tokens:[["check-in time","進房時間"],["check-out time","退房時間"]] },
+      { sentence:"Does the room have Internet access?",
+        zh:"房間裡有網路嗎？",
+        tokens:[["the room","房間"],["have","有"],["Internet access","網路連線"]] },
+      { sentence:"What time can I have breakfast?",
+        zh:"早餐幾點開始供應？",
+        tokens:[["What time","幾點"],["have breakfast","用早餐"]] },
+      { sentence:"Could you call a taxi for me?",
+        zh:"可以幫我叫計程車嗎？",
+        tokens:[["Could you","可以麻煩你"],["call a taxi","叫計程車"],["for me","幫我"]] },
+      { sentence:"I’d like to check out and finalize my bill.",
+        zh:"我要退房和結帳。",
+        tokens:[["check out","退房"],["finalize my bill","結清帳單"]] },
+    ],
+    dialog: [
+      { sentence:"Hello, I have a reservation under Chen.", zh:"你好，我以陳這個名字有訂房。", tokens:[["reservation","訂房"],["under","以…名義"]] },
+      { sentence:"May I see your passport, please?", zh:"可以看一下您的護照嗎？", tokens:[["May I","我可以"],["passport","護照"],["please","請"]] },
+      { sentence:"Here you are. Also, is breakfast included?", zh:"給你。另外，房價有包含早餐嗎？", tokens:[["Here you are","給你"],["is … included","有包含嗎"]] },
+      { sentence:"Yes, it is. Breakfast is served from 7 to 10 a.m.", zh:"有的。早餐供應時間是早上七點到十點。", tokens:[["is served","供應"],["from … to …","從…到…"]] },
+      { sentence:"Great, thank you.", zh:"太好了，謝謝。", tokens:[["Great","太好了"],["thank you","謝謝"]] },
+    ],
+    words: [
+      { sentence:"double room", zh:"雙人房（1張床）", tokens:[["double","雙人"],["room","房間"]] },
+      { sentence:"twin room", zh:"雙床房（2張單人床）", tokens:[["twin","雙床"],["room","房間"]] },
+      { sentence:"triple room", zh:"三人房", tokens:[["triple","三人"],["room","房間"]] },
+      { sentence:"family room", zh:"家庭房（四人）", tokens:[["family","家庭"],["room","房間"]] },
+      { sentence:"check-in / check-out", zh:"辦理入住／退房", tokens:[["check-in","入住"],["check-out","退房"]] },
+      { sentence:"reservation", zh:"預訂", tokens:[["reservation","預訂"]] },
+    ]
+  },
+
+  airport: {
+    title: "機場英文 (Airport)",
+    common: [
+      { sentence:"Would you like to book your seats now?", zh:"你要訂機位嗎?", tokens:[["Would you like to","你想要"],["book","預訂"],["seats","座位"],["now","現在"]] },
+      { sentence:"Would you like a window seat or an aisle seat?", zh:"您想要靠窗邊還是靠走道的位置?", tokens:[["window seat","靠窗座位"],["aisle seat","走道座位"]] },
+      { sentence:"What is your ticket number?", zh:"您的機票號碼是?", tokens:[["ticket number","機票號碼"]] },
+      { sentence:"What gate does the flight board at?", zh:"這班飛機要到哪一個登機門登機？", tokens:[["gate","登機門"],["board","登機"]] },
+      { sentence:"Excuse me, where is Gate __?", zh:"請問__號登機門在哪裡？", tokens:[["Excuse me","不好意思"],["Gate","登機門"]] },
+      { sentence:"When does the flight begin boarding?", zh:"這班飛機幾點登機？", tokens:[["begin boarding","開始登機"]] },
+      { sentence:"Excuse me, where is the transfer desk / lounge?", zh:"請問轉機櫃檯 / 休息室在哪裡？", tokens:[["transfer desk","轉機櫃檯"],["lounge","休息室"]] },
+    ],
+    dialog: [
+      { sentence:"I would like to confirm my flight.", zh:"我想確認我的班機。", tokens:[["confirm","確認"],["flight","航班"]] },
+      { sentence:"Can I get your ticket number?", zh:"請告訴我您的機票號碼。", tokens:[["ticket number","機票號碼"]] },
+      { sentence:"You are scheduled to depart on June 15th at 1:00 p.m. Is this correct?", zh:"您預定在6月15號下午一點起飛，對嗎？", tokens:[["scheduled to depart","預定起飛"]] },
+      { sentence:"Yes, it is.", zh:"是的。", tokens:[["Yes","是的"]] },
+      { sentence:"Your tickets have been confirmed. Please arrive 3 hours before departure.", zh:"已確認。請在起飛前三小時抵達。", tokens:[["confirmed","已確認"],["departure","起飛"]] },
+    ],
+    words: [
+      { sentence:"check-in", zh:"辦理登機", tokens:[["check","檢查"],["in","進入"]] },
+      { sentence:"delayed", zh:"延誤", tokens:[["delayed","延誤"]] },
+      { sentence:"boarding", zh:"登機", tokens:[["boarding","登機"]] },
+      { sentence:"gate", zh:"登機門", tokens:[["gate","登機門"]] },
+      { sentence:"departure time", zh:"起飛時間", tokens:[["departure","出發"],["time","時間"]] },
+      { sentence:"terminal", zh:"航廈", tokens:[["terminal","航廈"]] },
+    ]
+  },
+
+  transport: {
+    title: "交通英文 (Transportation)",
+    common: [
+      { sentence:"Could you tell me where I am now?", zh:"可以告訴我這是哪裡嗎?", tokens:[["where I am","我在哪裡"],["now","現在"]] },
+      { sentence:"Excuse me. How do I get to the railway station, please?", zh:"想請問如何到火車站？", tokens:[["How do I get to","怎麼去"],["railway station","火車站"]] },
+      { sentence:"Excuse me. Where’s the nearest restaurant, please?", zh:"最近的餐廳在哪裡？", tokens:[["nearest","最近的"],["restaurant","餐廳"]] },
+      { sentence:"Excuse me. I’m looking for the Number 8 bus stop.", zh:"想請問八號車站牌在哪裡?", tokens:[["looking for","正在找"],["bus stop","公車站"]] },
+      { sentence:"It’s easier if I can show you on the map.", zh:"你可以在地圖上指給我看嗎？", tokens:[["show you","給你看"],["on the map","在地圖上"]] },
+      { sentence:"How long does it take to go to ____?", zh:"到＿＿需要多長時間？", tokens:[["How long","多久"],["does it take","要花多久"]] },
+      { sentence:"Would it be better for me to take a taxi/bus?", zh:"搭計程車／公車會比較好嗎？", tokens:[["take a taxi/bus","搭計程車／公車"]] },
+      { sentence:"It’s about five minutes from here.", zh:"從這裡大約五分鐘。", tokens:[["about","大約"],["from here","從這裡"]] },
+      { sentence:"It’s about a ten-minute walk.", zh:"大約走十分鐘。", tokens:[["ten-minute walk","十分鐘路程"]] },
+      { sentence:"Where is the bus stop / taxi stand?", zh:"公車站／計程車招呼站在哪裡？", tokens:[["bus stop","公車站"],["taxi stand","計程車招呼站"]] },
+      { sentence:"How much does it cost to the train station by taxi?", zh:"乘計程車到車站需要多少錢？", tokens:[["How much","多少"],["cost","費用"]] },
+      { sentence:"Take me to this address, please.", zh:"請載我去這個地址。", tokens:[["Take me to","載我去"],["address","地址"]] },
+      { sentence:"Please stop right here.", zh:"
